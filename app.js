@@ -1,11 +1,25 @@
 const express = require("express")
 const path = require("path")
-const app = express()
 const bcrypt = require('bcrypt')
 const redis = require('redis')
+const session = require('express-session')
+const RedisStore = require('connect-redis')(session)
+const app = express()
 const client = redis.createClient()
 app.use(express.urlencoded({extended: true}))
-
+app.use(
+    session({
+        store: new RedisStore({client: client}),
+        resave: true,
+        saveUninitialized: true,
+        cookie: {
+            maxAge: 36000000,
+            httpOnly: false,
+            secure: false,
+        },
+        secret: 'bM80SARMxlq4fiWhulfNSeUFURWLTY8vyf',
+    })
+)
 
 //Express using PUG templating Engine, look for templates in the view folder
 app.set("view engine", "pug")
@@ -39,6 +53,14 @@ app.post("/", (req, res) => {
         })
     } else {
         //user exists, login procedure
+        client.hget(`user:${userid}`, 'hash', async (err, hash) => {
+            const result = await bcrypt.compare(password, hash)
+            if(result) {
+                //password was ok
+            } else {
+                //wrong password
+            }
+        })
     }
 })
 
