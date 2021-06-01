@@ -1,6 +1,9 @@
 const express = require("express")
 const path = require("path")
 const app = express()
+const bcrypt = require('bcrypt')
+const redis = require('redis')
+const client = redis.createClient()
 app.use(express.urlencoded({extended: true}))
 
 
@@ -25,5 +28,24 @@ app.post("/", (req, res) => {
         return
     }
     console.log(req.body, username, password)
+    client.hget('users', username, (err, userid) => {
+    if(!userid){
+        //user does not exist, signup procedure
+        client.incr('userid', async (err, userid) => {
+            client.hset('users', username, userid)
+            const saltRounds = 10
+            const hash = await bcrypt.hash(password, saltRounds)
+            client.hset(`user:${userid}`, 'hash', hash, 'username', username)
+        })
+    } else {
+        //user exists, login procedure
+    }
+})
+
+
+
+
     res.end()
 })
+
+
