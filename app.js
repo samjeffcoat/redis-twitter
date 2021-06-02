@@ -28,7 +28,13 @@ app.set("views", path.join(__dirname, "views"));
 // Initializing our server
 app.get("/", (req, res) => {
   if (req.session.userid) {
-    res.render("dashboard");
+    client.hkeys("users", (err, users)=> {
+        console.log(users)
+        res.render("dashboard", {
+            users,
+        });
+
+    })
   } else {
     res.render("login");
   }
@@ -48,7 +54,13 @@ app.post("/", (req, res) => {
   const saveSessionAndRenderDashboard = (userid) => {
     req.session.userid = userid;
     req.session.save();
-    res.render("dashboard");
+    client.hkeys("users", (err, users)=> {
+        console.log(users)
+        res.render("dashboard", {
+            users,
+        });
+
+    })
   };
 
   const handleSignup = (username, password) => {
@@ -85,4 +97,34 @@ app.post("/", (req, res) => {
   });
 });
 
+// adding a post route
+app.get("/post", (req, res) => {
+  if (req.session.userid) {
+    res.render("post");
+  } else {
+    res.render("login");
+  }
+});
+
+app.post("/post", (req, res) => {
+    if(!req.session.userid){
+        res.render("login")
+        return
+    }
+
+    const {message} = req.body
+
+    client.incr("postid", async(err, postid) => {
+        client.hmset(
+            `post:${postid}`,
+            "userid",
+            req.session.userid,
+            "message",
+            message,
+            "timestamp",
+            Date.now()
+        )
+        res.render("dashboard")
+    })
+})
 app.listen(3000, () => console.log("Server Ready"));
